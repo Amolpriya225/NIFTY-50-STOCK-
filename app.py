@@ -3,16 +3,17 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
+
+# Har 10 second me auto refresh
+st_autorefresh(interval=10 * 1000, key="live_refresh")
 
 st.set_page_config(page_title="NIFTY 50 PRO", layout="wide")
-st.title("NIFTY 50 PRO DASHBOARD")
+st.title("NIFTY 50 PRO - LIVE")
 
 indices = {
-    "NIFTY 50": "^NSEI",
-    "SENSEX": "^BSESN",
-    "BANK NIFTY": "^NSEBANK",
-    "FIN NIFTY": "^CNXFIN",
-    "MIDCAP NIFTY": "^NSEMDCP50"
+    "NIFTY 50": "^NSEI", "SENSEX": "^BSESN",
+    "BANK NIFTY": "^NSEBANK", "FIN NIFTY": "^CNXFIN", "MIDCAP NIFTY": "^NSEMDCP50"
 }
 stocks = {
     "RELIANCE": "RELIANCE.NS", "TCS": "TCS.NS", "INFY": "INFY.NS",
@@ -32,7 +33,7 @@ with c3:
 
 period_map = {"5m": "1d", "15m": "5d", "1h": "1mo", "1d": "6mo"}
 
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=5)
 def get_data(tick, period, interval):
     df = yf.download(tick, period=period, interval=interval, progress=False)
     if isinstance(df.columns, pd.MultiIndex):
@@ -42,7 +43,7 @@ def get_data(tick, period, interval):
 data = get_data(ticker, period_map[timeframe], timeframe)
 
 if data.empty:
-    st.error("Market band hai ya data nahi aa raha.")
+    st.error("Market band hai.")
     st.stop()
 
 close = float(data['Close'].iloc[-1])
@@ -58,12 +59,12 @@ m4.metric("LOW", f"Rs {low:.2f}")
 
 fig = go.Figure(data=[go.Candlestick(x=data.index, open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'])])
 fig.update_layout(height=500, xaxis_rangeslider_visible=False, template="plotly_white")
-fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
+# YE LINE GAP HATAYEGI
+fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"]), dict(bounds=[15.5, 9.15], pattern="hour")])
 st.plotly_chart(fig, use_container_width=True)
 
 st.divider()
 st.subheader("Recommendation % me")
-
 data['SMA20'] = data['Close'].rolling(20).mean()
 data['SMA50'] = data['Close'].rolling(50).mean()
 delta = data['Close'].diff()
@@ -71,7 +72,6 @@ gain = (delta.where(delta > 0, 0)).rolling(14).mean()
 loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
 rs = gain / loss
 data['RSI'] = 100 - (100 / (1 + rs))
-
 last_rsi = float(data['RSI'].iloc[-1])
 sma20 = float(data['SMA20'].iloc[-1])
 sma50 = float(data['SMA50'].iloc[-1])
@@ -85,14 +85,9 @@ else:
 
 sl_price = close * (1 + sl_pct/100)
 tgt_price = close * (1 + tgt_pct/100)
-
 r1, r2, r3, r4 = st.columns(4)
 r1.metric("Signal", signal)
 r2.metric("Entry", f"Rs {close:.2f}")
 r3.metric("Stoploss", f"{sl_pct}%", f"Rs {sl_price:.2f}")
 r4.metric("Target", f"{tgt_pct}%", f"Rs {tgt_price:.2f}")
-
-st.info(f"Time: {datetime.now().strftime('%H:%M:%S')} | RSI: {last_rsi:.2f}")
-
-if st.button("Refresh Karo"):
-    st.rerun()
+st.caption(f"Last Updated: {datetime.now().strftime('%H:%M:%S')} | Auto-refresh every 10 sec")
