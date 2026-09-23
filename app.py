@@ -55,19 +55,31 @@ sma50=float(df['SMA50'].iloc[-1])
 
 trend="BULLISH" if sma20>sma50 and rsi>50 else "BEARISH" if sma20<sma50 and rsi<50 else "SIDEWAYS"
 
-# === NIFTY SPOT ENTRY SL TARGET (YE AAP MAANG RAHE THE) ===
+# === NIFTY SPOT ENTRY SL TARGET - TIMEFRAME WISE CONVENIENT ===
+# Timeframe ke hisab se SL/TGT chota-bada
+tf_settings = {
+    "5m":  {"sl": 0.3, "tgt": 0.6, "label": "Scalping (5m)"},
+    "15m": {"sl": 0.5, "tgt": 1.0, "label": "Intraday (15m)"},
+    "1h":  {"sl": 1.0, "tgt": 2.0, "label": "Swing (1h)"}
+}
+setting = tf_settings.get(tf, {"sl":0.5,"tgt":1.0,"label":tf})
+
 if trend=="BULLISH":
     spot_signal="BUY"
-    sl_pct=-1.0
-    tgt_pct=2.0
+    sl_pct = -setting["sl"]
+    tgt_pct = setting["tgt"]
 elif trend=="BEARISH":
     spot_signal="SELL"
-    sl_pct=1.0
-    tgt_pct=-2.0
+    sl_pct = setting["sl"]
+    tgt_pct = -setting["tgt"]
 else:
     spot_signal="HOLD"
-    sl_pct=-0.5
-    tgt_pct=0.5
+    sl_pct = -0.3
+    tgt_pct = 0.3
+
+# ATR based bhi nikalte hain (zyada accurate)
+atr = float((df['High'] - df['Low']).rolling(14).mean().iloc[-1])
+atr_pct = (atr / spot * 100)
 
 sl_price = spot * (1 + sl_pct/100)
 tgt_price = spot * (1 + tgt_pct/100)
