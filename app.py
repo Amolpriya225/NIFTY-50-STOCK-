@@ -99,8 +99,7 @@ r3.metric("Stoploss", f"{sl_pct}%", f"Rs {sl_price:.2f}")
 r4.metric("Target", f"{tgt_pct}%", f"Rs {tgt_price:.2f}")
 r5.metric("Confidence", "78%" if trend!="SIDEWAYS" else "45%")
 
-if trend=="BULLISH":
-    st.success(f"Spot BUY: {spot:.2f} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) - Trend Reverse hua to EXIT")
+    st.success(f"Spot BUY: {spot:.2f} | TimeFrame: {setting['label']} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) | ATR: {atr:.1f}pts - Trend Reverse hua to EXIT")
 else:
     st.error(f"Spot SELL: {spot:.2f} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) - Trend Reverse hua to EXIT")
 
