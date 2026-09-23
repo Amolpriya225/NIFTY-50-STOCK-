@@ -58,6 +58,7 @@ m4.metric("LOW", f"Rs {low:.2f}")
 
 fig = go.Figure(data=[go.Candlestick(x=data.index, open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'])])
 fig.update_layout(height=500, xaxis_rangeslider_visible=False, template="plotly_white")
+fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
 st.plotly_chart(fig, use_container_width=True)
 
 st.divider()
