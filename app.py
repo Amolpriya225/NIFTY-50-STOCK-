@@ -56,11 +56,10 @@ sma50=float(df['SMA50'].iloc[-1])
 trend="BULLISH" if sma20>sma50 and rsi>50 else "BEARISH" if sma20<sma50 and rsi<50 else "SIDEWAYS"
 
 # === NIFTY SPOT ENTRY SL TARGET - TIMEFRAME WISE CONVENIENT ===
-# Timeframe ke hisab se SL/TGT chota-bada
 tf_settings = {
-    "5m":  {"sl": 0.3, "tgt": 0.6, "label": "Scalping (5m)"},
+    "5m": {"sl": 0.3, "tgt": 0.6, "label": "Scalping (5m)"},
     "15m": {"sl": 0.5, "tgt": 1.0, "label": "Intraday (15m)"},
-    "1h":  {"sl": 1.0, "tgt": 2.0, "label": "Swing (1h)"}
+    "1h": {"sl": 1.0, "tgt": 2.0, "label": "Swing (1h)"}
 }
 setting = tf_settings.get(tf, {"sl":0.5,"tgt":1.0,"label":tf})
 
@@ -77,10 +76,8 @@ else:
     sl_pct = -0.3
     tgt_pct = 0.3
 
-# ATR based bhi nikalte hain (zyada accurate)
 atr = float((df['High'] - df['Low']).rolling(14).mean().iloc[-1])
 atr_pct = (atr / spot * 100)
-
 sl_price = spot * (1 + sl_pct/100)
 tgt_price = spot * (1 + tgt_pct/100)
 
@@ -99,9 +96,10 @@ r3.metric("Stoploss", f"{sl_pct}%", f"Rs {sl_price:.2f}")
 r4.metric("Target", f"{tgt_pct}%", f"Rs {tgt_price:.2f}")
 r5.metric("Confidence", "78%" if trend!="SIDEWAYS" else "45%")
 
+if trend=="BULLISH":
     st.success(f"Spot BUY: {spot:.2f} | TimeFrame: {setting['label']} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) | ATR: {atr:.1f}pts - Trend Reverse hua to EXIT")
 else:
-    st.error(f"Spot SELL: {spot:.2f} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) - Trend Reverse hua to EXIT")
+    st.error(f"Spot SELL: {spot:.2f} | TimeFrame: {setting['label']} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) | ATR: {atr:.1f}pts - Trend Reverse hua to EXIT")
 
 fig=go.Figure(data=[go.Candlestick(x=df.index,open=df['Open'],high=df['High'],low=df['Low'],close=df['Close'])])
 fig.update_layout(height=400, xaxis_rangeslider_visible=False, template="plotly_white")
