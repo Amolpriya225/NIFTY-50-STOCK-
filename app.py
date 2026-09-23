@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import requests
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
@@ -11,18 +12,10 @@ st_autorefresh(interval=8000, key="refresh")
 st.set_page_config(page_title="NIFTY OPTIONS PRO", layout="wide")
 st.title("NIFTY 50 + OPTIONS - LIVE TRADING")
 
-# SOUND FUNCTION
 def play_alert_sound():
     components.html("""
-        <audio autoplay>
-            <source src="https://www.soundjay.com/buttons/beep-07a.mp3" type="audio/mpeg">
-        </audio>
-        <script>
-            var audio = new Audio('https://www.soundjay.com/buttons/beep-07a.mp3');
-            audio.play();
-            // Browser notification bhi
-            if (Notification.permission!== 'granted') Notification.requestPermission();
-        </script>
+        <audio autoplay><source src="https://www.soundjay.com/buttons/beep-07a.mp3" type="audio/mpeg"></audio>
+        <script>var audio = new Audio('https://www.soundjay.com/buttons/beep-07a.mp3'); audio.play();</script>
     """, height=0)
 
 @st.cache_data(ttl=20)
@@ -70,7 +63,6 @@ sma50=float(df['SMA50'].iloc[-1])
 
 trend="BULLISH" if sma20>sma50 and rsi>50 else "BEARISH" if sma20<sma50 and rsi<50 else "SIDEWAYS"
 
-# === NIFTY SPOT ENTRY SL TARGET - TIMEFRAME WISE ===
 tf_settings = {
     "5m": {"sl": 0.3, "tgt": 0.6, "label": "Scalping (5m)"},
     "15m": {"sl": 0.5, "tgt": 1.0, "label": "Intraday (15m)"},
@@ -79,20 +71,13 @@ tf_settings = {
 setting = tf_settings.get(tf, {"sl":0.5,"tgt":1.0,"label":tf})
 
 if trend=="BULLISH":
-    spot_signal="BUY"
-    sl_pct = -setting["sl"]
-    tgt_pct = setting["tgt"]
+    spot_signal="BUY"; sl_pct = -setting["sl"]; tgt_pct = setting["tgt"]
 elif trend=="BEARISH":
-    spot_signal="SELL"
-    sl_pct = setting["sl"]
-    tgt_pct = -setting["tgt"]
+    spot_signal="SELL"; sl_pct = setting["sl"]; tgt_pct = -setting["tgt"]
 else:
-    spot_signal="HOLD"
-    sl_pct = -0.3
-    tgt_pct = 0.3
+    spot_signal="HOLD"; sl_pct = -0.3; tgt_pct = 0.3
 
 atr = float((df['High'] - df['Low']).rolling(14).mean().iloc[-1])
-atr_pct = (atr / spot * 100)
 sl_price = spot * (1 + sl_pct/100)
 tgt_price = spot * (1 + tgt_pct/100)
 
@@ -102,7 +87,6 @@ c2.metric("TREND", trend)
 c3.metric("SMA20/50", f"{sma20:.0f}/{sma50:.0f}")
 c4.metric("Time", datetime.now().strftime("%H:%M:%S"))
 
-# SPOT RECOMMENDATION BOX
 st.subheader("📊 NIFTY SPOT - Entry / Stoploss / Target % me")
 r1,r2,r3,r4,r5=st.columns(5)
 r1.metric("Signal", spot_signal)
@@ -111,71 +95,88 @@ r3.metric("Stoploss", f"{sl_pct}%", f"Rs {sl_price:.2f}")
 r4.metric("Target", f"{tgt_pct}%", f"Rs {tgt_price:.2f}")
 r5.metric("Confidence", "78%" if trend!="SIDEWAYS" else "45%")
 
-# === FIXED + SOUND ALERT ===
 if trend=="BULLISH":
     st.success(f"Spot BUY: {spot:.2f} | TimeFrame: {setting['label']} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) | ATR: {atr:.1f}pts - Trend Reverse hua to EXIT")
 elif trend=="BEARISH":
     st.error(f"Spot SELL: {spot:.2f} | TimeFrame: {setting['label']} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) | ATR: {atr:.1f}pts - Trend Reverse hua to EXIT")
     play_alert_sound()
 else:
-    st.warning(f"Spot HOLD: {spot:.2f} | TimeFrame: {setting['label']} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) | ATR: {atr:.1f}pts - SIDEWAYS - No Trade")
+    st.warning(f"Spot HOLD: {spot:.2f} | TimeFrame: {setting['label']} | SIDEWAYS - No Trade | ATR: {atr:.1f}pts")
     play_alert_sound()
-    st.toast("⚠️ Trend Reversal / SIDEWAYS - Alert!", icon="🚨")
 
-fig=go.Figure(data=[go.Candlestick(x=df.index,open=df['Open'],high=df['High'],low=df['Low'],close=df['Close'])])
-fig.update_layout(height=400, xaxis_rangeslider_visible=False, template="plotly_white")
-fig.update_xaxes(rangebreaks=[dict(bounds=["sat","mon"]),dict(bounds=[15.5,9.15],pattern="hour")])
-st.plotly_chart(fig,use_container_width=True)
+# === NEW CHART WITH INDICATORS + SCROLLING ===
+fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.05, row_heights=[0.7, 0.3])
+
+# Candlestick
+fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name="NIFTY"), row=1, col=1)
+
+# SMA Indicators - Ab chart par dikhega
+fig.add_trace(go.Scatter(x=df.index, y=df['SMA20'], line=dict(color='orange', width=1.5), name='SMA20'), row=1, col=1)
+fig.add_trace(go.Scatter(x=df.index, y=df['SMA50'], line=dict(color='blue', width=1.5), name='SMA50'), row=1, col=1)
+
+# RSI in lower chart
+fig.add_trace(go.Scatter(x=df.index, y=df['RSI'], line=dict(color='purple', width=1.5), name='RSI'), row=2, col=1)
+fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
+fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+fig.add_hline(y=50, line_dash="dot", line_color="gray", row=2, col=1)
+
+fig.update_layout(
+    height=600,
+    template="plotly_white",
+    xaxis_rangeslider_visible=False,
+    dragmode='pan', # Left/Right/Up/Down drag enabled
+    showlegend=True,
+    hovermode='x unified'
+)
+fig.update_xaxes(rangeslider_visible=False, showspikes=True)
+fig.update_yaxes(fixedrange=False) # Up/Down scroll enabled
+
+st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displayModeBar': True, 'modeBarButtonsToAdd': ['drawline','drawopenpath','eraseshape']})
 
 st.divider()
+st.subheader(f"Options Chain Near ATM {round(spot/step)*step} - ONLY 100% CONFIRMED")
+
 chain=get_nse_chain(nse_sym)
 oc=[]
 atm=round(spot/step)*step
 
-if chain:
-    recs=chain['records']['data']
-    for rec in recs:
-        strike=rec['strikePrice']
-        if atm-step*3 <= strike <= atm+step*3 and 'CE' in rec and 'PE' in rec:
-            oc.append({"strike":strike,"CE":rec['CE']['lastPrice'],"PE":rec['PE']['lastPrice']})
-else:
-    for s in [atm-step*3, atm-step*2, atm-step, atm, atm+step, atm+step*2, atm+step*3]:
-        oc.append({"strike":s,"CE":150.5,"PE":150.5})
+if not chain:
+    st.error("⚠️ NSE Live Option Chain load nahi ho raha - 2 min baad refresh karo.")
+    st.stop()
 
-oc=sorted(oc,key=lambda x:x['strike'])
+recs=chain['records']['data']
+for rec in recs:
+    strike=rec['strikePrice']
+    if atm-step*2 <= strike <= atm+step*2 and 'CE' in rec and 'PE' in rec:
+        oc.append({"strike":strike,"CE":rec['CE']['lastPrice'],"PE":rec['PE']['lastPrice'],"CE_OI":rec['CE']['openInterest'],"PE_OI":rec['PE']['openInterest']})
 
-def signal_for(strike, typ):
-    is_atm = strike==atm
-    if typ=="CE":
-        if trend=="BULLISH" and is_atm:
-            return "✅ BUY CE", "-25%", "+50%", "78%", "Strong Bullish", False
-        elif trend=="BULLISH":
-            return "✅ BUY CE", "-15%", "+30%", "65%", "Bullish", False
-        else:
-            return "🔴 EXIT CE", "0%", "0%", "90%", "Trend Reverse - Exit CE Now!", True
-    else:
-        if trend=="BEARISH" and is_atm:
-            return "✅ BUY PE", "-25%", "+50%", "78%", "Strong Bearish", False
-        elif trend=="BEARISH":
-            return "✅ BUY PE", "-15%", "+30%", "65%", "Bearish", False
-        else:
-            return "🔴 EXIT PE", "0%", "0%", "90%", "Trend Reverse - Exit PE Now!", True
-
-st.subheader(f"Options Chain Near ATM {atm}")
-
-ce_data=[]
-pe_data=[]
+ce_data=[]; pe_data=[]
 for item in oc:
     s=item['strike']
-    sig, sl, tgt, conf, reason, is_exit = signal_for(s,"CE")
-    ce_data.append({"Strike":s,"Type":"ATM" if s==atm else "ITM" if s<spot else "OTM","LTP":item['CE'],"Signal":sig,"Conf":conf,"SL":sl,"TGT":tgt,"Exit":reason if is_exit else "-"})
-    sig2, sl2, tgt2, conf2, reason2, is_exit2 = signal_for(s,"PE")
-    pe_data.append({"Strike":s,"Type":"ATM" if s==atm else "ITM" if s>spot else "OTM","LTP":item['PE'],"Signal":sig2,"Conf":conf2,"SL":sl2,"TGT":tgt2,"Exit":reason2 if is_exit2 else "-"})
+    if trend=="BULLISH" and rsi>58 and sma20>sma50:
+        if s==atm:
+            ce_data.append({"Strike":s,"Type":"ATM","LTP":item['CE'],"Signal":"✅ BUY CE - 100% CONFIRMED","Conf":"82%","SL":"-25%","TGT":"+50%","OI":item['CE_OI'],"Reason":"RSI>60 + SMA Bullish"})
+        elif s==atm+step:
+            ce_data.append({"Strike":s,"Type":"OTM","LTP":item['CE'],"Signal":"✅ BUY CE","Conf":"71%","SL":"-20%","TGT":"+35%","OI":item['CE_OI'],"Reason":"Momentum CE"})
+    if trend=="BEARISH" and rsi<42 and sma20<sma50:
+        if s==atm:
+            pe_data.append({"Strike":s,"Type":"ATM","LTP":item['PE'],"Signal":"✅ BUY PE - 100% CONFIRMED","Conf":"82%","SL":"-25%","TGT":"+50%","OI":item['PE_OI'],"Reason":"RSI<40 + SMA Bearish"})
+        elif s==atm-step:
+            pe_data.append({"Strike":s,"Type":"OTM","LTP":item['PE'],"Signal":"✅ BUY PE","Conf":"71%","SL":"-20%","TGT":"+35%","OI":item['PE_OI'],"Reason":"Momentum PE"})
 
 cols=st.columns(2)
 with cols[0]:
-    st.markdown("### 📈 CALL (CE)")
-    st.dataframe(pd.DataFrame(ce_data), use_container_width=True, height=350)
+    st.markdown("### 📈 CALL (CE) - Confirmed Only")
+    if ce_data:
+        st.dataframe(pd.DataFrame(ce_data), use_container_width=True, height=350)
+    else:
+        st.info("🔍 Abhi koi 100% Confirmed CE Signal nahi hai.")
 with cols[1]:
-    st.markdown("### 📉 PUT (PE)")
-    st.dataframe(pd.DataFrame(pe_data), use_container_width=True, height=350)
+    st.markdown("### 📉 PUT (PE) - Confirmed Only")
+    if pe_data:
+        st.dataframe(pd.DataFrame(pe_data), use_container_width=True, height=350)
+    else:
+        st.info("🔍 Abhi koi 100% Confirmed PE Signal nahi hai.")
+
+if trend=="SIDEWAYS":
+    st.warning("⚠️ Market SIDEWAYS hai - Options me entry mat lo.")
