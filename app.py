@@ -5,10 +5,25 @@ import plotly.graph_objects as go
 import requests
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
+import streamlit.components.v1 as components
 
 st_autorefresh(interval=8000, key="refresh")
 st.set_page_config(page_title="NIFTY OPTIONS PRO", layout="wide")
 st.title("NIFTY 50 + OPTIONS - LIVE TRADING")
+
+# SOUND FUNCTION
+def play_alert_sound():
+    components.html("""
+        <audio autoplay>
+            <source src="https://www.soundjay.com/buttons/beep-07a.mp3" type="audio/mpeg">
+        </audio>
+        <script>
+            var audio = new Audio('https://www.soundjay.com/buttons/beep-07a.mp3');
+            audio.play();
+            // Browser notification bhi
+            if (Notification.permission!== 'granted') Notification.requestPermission();
+        </script>
+    """, height=0)
 
 @st.cache_data(ttl=20)
 def get_nse_chain(symbol="NIFTY"):
@@ -55,7 +70,7 @@ sma50=float(df['SMA50'].iloc[-1])
 
 trend="BULLISH" if sma20>sma50 and rsi>50 else "BEARISH" if sma20<sma50 and rsi<50 else "SIDEWAYS"
 
-# === NIFTY SPOT ENTRY SL TARGET - TIMEFRAME WISE CONVENIENT ===
+# === NIFTY SPOT ENTRY SL TARGET - TIMEFRAME WISE ===
 tf_settings = {
     "5m": {"sl": 0.3, "tgt": 0.6, "label": "Scalping (5m)"},
     "15m": {"sl": 0.5, "tgt": 1.0, "label": "Intraday (15m)"},
@@ -96,10 +111,16 @@ r3.metric("Stoploss", f"{sl_pct}%", f"Rs {sl_price:.2f}")
 r4.metric("Target", f"{tgt_pct}%", f"Rs {tgt_price:.2f}")
 r5.metric("Confidence", "78%" if trend!="SIDEWAYS" else "45%")
 
+# === FIXED + SOUND ALERT ===
 if trend=="BULLISH":
     st.success(f"Spot BUY: {spot:.2f} | TimeFrame: {setting['label']} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) | ATR: {atr:.1f}pts - Trend Reverse hua to EXIT")
-else:
+elif trend=="BEARISH":
     st.error(f"Spot SELL: {spot:.2f} | TimeFrame: {setting['label']} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) | ATR: {atr:.1f}pts - Trend Reverse hua to EXIT")
+    play_alert_sound()
+else:
+    st.warning(f"Spot HOLD: {spot:.2f} | TimeFrame: {setting['label']} | SL {sl_pct}% ({sl_price:.2f}) | TGT {tgt_pct}% ({tgt_price:.2f}) | ATR: {atr:.1f}pts - SIDEWAYS - No Trade")
+    play_alert_sound()
+    st.toast("⚠️ Trend Reversal / SIDEWAYS - Alert!", icon="🚨")
 
 fig=go.Figure(data=[go.Candlestick(x=df.index,open=df['Open'],high=df['High'],low=df['Low'],close=df['Close'])])
 fig.update_layout(height=400, xaxis_rangeslider_visible=False, template="plotly_white")
