@@ -109,7 +109,32 @@ spot = results[primary_tf]["Close"]
 
 weighted_score = 0; total_weight = 0; bull_count = 0; bear_count = 0
 for tf, result in results.items():
-    weight = TIMEFRAMES[tf]["weight"]; weighted_score += (result["Score"] * weight); total_weight += weight
+    # OLD CODE KO HATAO - YE NAYA LAGAO
+weighted_score = 0
+total_weight = 0
+
+for tf in TIMEFRAMES:
+    result = analyze_timeframe(tf) # aapka function jo score nikalta hai
+    if result is None or result.get("Score") is None:
+        continue
+
+    try:
+        score = float(result["Score"])
+        weight = float(TIMEFRAMES[tf]["weight"])
+    except:
+        continue
+
+    if pd.isna(score) or pd.isna(weight):
+        continue
+
+    weighted_score += score * weight
+    total_weight += weight
+
+# Final score
+if total_weight > 0:
+    final_score = weighted_score / total_weight
+else:
+    final_score = 0
     if result["Trend"] == "BULLISH": bull_count += 1
     elif result["Trend"] == "BEARISH": bear_count += 1
 mtf_score = weighted_score / total_weight
