@@ -286,3 +286,5 @@ with tab1h:
 
 with tab1d:
     show_timeframe("1D")
+
+# NIFTY SPOT PRO dashboard
