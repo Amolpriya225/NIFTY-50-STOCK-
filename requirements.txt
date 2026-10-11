@@ -1,6 +1,11 @@
 
 streamlit
-streamlit-autorefresh
 yfinance
 pandas
 plotly
+streamlit-autorefresh
+smartapi-python
+pyotp
+logzero
+websocket-client
+pycryptodome
