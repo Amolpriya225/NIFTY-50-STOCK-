@@ -289,7 +289,6 @@ with tab1d:
 
 # NIFTY SPOT PRO dashboard
 # Angel One SmartAPI connection test
-import streamlit as st
 
 st.subheader("Angel One API Status")
 
