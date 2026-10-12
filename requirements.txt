@@ -9,3 +9,5 @@ pyotp
 logzero
 websocket-client
 pycryptodome
+smartapi-python
+pyotp
