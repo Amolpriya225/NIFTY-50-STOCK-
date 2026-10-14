@@ -5,16 +5,17 @@ import plotly.graph_objects as go
 from streamlit_autorefresh import st_autorefresh
 import pyotp
 from SmartApi import SmartConnect
+import json
 
 st.set_page_config(page_title="NIFTY SPOT PRO", page_icon="📊", layout="wide")
 st_autorefresh(interval=30000, key="refresh")
 
 with st.sidebar:
     st.header("Angel One LIVE")
-    st.success("Login Ready")
+    st.success("Login Active")
 
 st.title("📊 NIFTY SPOT PRO")
-st.caption("EMA 9/21 | RSI 14 | Entry | Stop Loss | Targets")
+st.caption("EMA 9/21 | RSI 14 | Entry | Stop Loss | Targets - ANGEL LIVE")
 
 TIME_MAP = {
     "5M": {"period": "5d", "interval": "5m"},
@@ -87,7 +88,7 @@ with tab1h: show_timeframe("1H")
 with tab1d: show_timeframe("1D")
 
 st.divider()
-st.subheader("Angel One API Status - FIXED")
+st.subheader("Angel One API Status - LIVE")
 
 def get_angel_live_fixed():
     try:
@@ -100,24 +101,39 @@ def get_angel_live_fixed():
         session = obj.generateSession(client_code, pin, totp)
 
         if not isinstance(session, dict) or not session.get('status'):
-            return False, f"Login fail: {session}"
+            # string reply asel tar
+            if isinstance(session, str):
+                try:
+                    session = json.loads(session)
+                except:
+                    return False, f"Angel Reply: {session}"
+            if not session.get('status'):
+                return False, f"Login fail: {session}"
 
-        # LTP with safe parsing - heach fix aahe
+        # LTP - FINAL FIX
         try:
             ltp_data = obj.ltpData("NSE", "NIFTY", "26000")
-            # Different versions return different format
+            if isinstance(ltp_data, str):
+                try:
+                    ltp_data = json.loads(ltp_data)
+                except:
+                    return True, f"Login OK - Raw LTP String: {ltp_data[:100]}"
+
             if isinstance(ltp_data, dict):
-                data = ltp_data.get('data', {})
-                price = data.get('ltp') or data.get('last') or data.get('close') or 0
-                if isinstance(data, dict) and not price and 'ltp' in str(ltp_data).lower():
-                    # try alternative parsing
-                    price = data.get('ltp')
-                return True, price if price else ltp_data
+                d = ltp_data.get('data', {})
+                if isinstance(d, dict):
+                    price = d.get('ltp') or d.get('last') or d.get('close') or 0
+                    if price:
+                        return True, float(price)
+                    else:
+                        return True, f"Login OK - {client_code} (LTP Data: {d})"
+                else:
+                    # data direct number asel
+                    return True, float(d)
             else:
-                return True, ltp_data
+                return True, f"Login OK - {client_code}"
         except Exception as ltp_err:
-            # Login zala pan LTP fail - tarihi success manu
-            return True, f"Login OK (LTP error: {ltp_err}) - {client_code}"
+            return True, f"Login OK - {client_code} (LTP Skip: {ltp_err})"
 
     except Exception as e:
         return False, str(e)
@@ -125,16 +141,16 @@ def get_angel_live_fixed():
 if st.button("Test SmartAPI Setup - REAL LOGIN"):
     ok, msg = get_angel_live_fixed()
     if ok:
-        st.success(f"Angel Login SUCCESS! LIVE = {msg}")
+        st.success(f"Angel Login SUCCESS! LIVE NIFTY = {msg}")
         st.balloons()
-        st.sidebar.success(f"LIVE: {msg}")
+        st.sidebar.metric("LIVE NIFTY ANGEL", f"{msg}")
     else:
         st.error(f"FAIL: {msg}")
 
-# Auto live price sidebar madhe
+# Sidebar auto live
 try:
     ok_live, price_live = get_angel_live_fixed()
     if ok_live:
-        st.sidebar.metric("LIVE NIFTY", f"{price_live}")
+        st.sidebar.metric("LIVE NIFTY ANGEL", f"{price_live}")
 except:
     pass
