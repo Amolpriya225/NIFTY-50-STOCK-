@@ -294,8 +294,8 @@ st.subheader("Angel One API Status")
 
 if st.button("Test SmartAPI Setup"):
     try:
-                            api_key = st.secrets["ANGEL_API_KEY"]
-        client_code = st.secrets["ANGEL_CLIENT_CODE"]
+api_key = st.secrets["ANGEL_API_KEY"]
+client_code = st.secrets["ANGEL_CLIENT_CODE"]
         pin = st.secrets["ANGEL_PIN"]
         totp_secret = st.secrets["ANGEL_TOTP_SECRET"]
 
