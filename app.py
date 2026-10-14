@@ -294,14 +294,12 @@ st.subheader("Angel One API Status")
 
 if st.button("Test SmartAPI Setup"):
     try:
-api_key = st.secrets["ANGEL_API_KEY"]
-client_code = st.secrets["ANGEL_CLIENT_CODE"]
+        api_key = st.secrets["ANGEL_API_KEY"]
+        client_code = st.secrets["ANGEL_CLIENT_CODE"]
         pin = st.secrets["ANGEL_PIN"]
         totp_secret = st.secrets["ANGEL_TOTP_SECRET"]
-
         st.success("All four Secret values were found.")
         st.info("Secrets are present. Login has not been tested yet.")
-
     except KeyError as e:
         st.error(f"Missing Secret name: {e}")
     except Exception:
